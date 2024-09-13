@@ -1,0 +1,57 @@
+import streamlit as st
+import numpy as np
+import pandas as pd
+from xgboost import XGBRegressor
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Load your cleaned data (Assuming it is saved in 'solarpowergeneration.csv')
+df_cleaned = pd.read_csv('solarpowergeneration.csv')
+
+# Preprocessing
+X = df_cleaned.drop('power-generated', axis=1).values  # Convert DataFrame to NumPy array
+y = df_cleaned['power-generated'].values  # Convert target to NumPy array
+
+scaler = MinMaxScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+# Best model from training - XGBoost Regressor
+best_model = XGBRegressor(random_state=42)
+best_model.fit(X_train, y_train)
+
+# Streamlit Interface
+st.title("Solar Power Generation Prediction")
+
+# Create sliders for all input parameters based on the features
+temperature = st.slider('Temperature', min_value=float(X[:, 0].min()), max_value=float(X[:, 0].max()), value=float(X[:, 0].mean()))
+wind_speed = st.slider('Wind Speed', min_value=float(X[:, 1].min()), max_value=float(X[:, 1].max()), value=float(X[:, 1].mean()))
+humidity = st.slider('Humidity', min_value=float(X[:, 2].min()), max_value=float(X[:, 2].max()), value=float(X[:, 2].mean()))
+sky_cover = st.slider('Sky Cover', min_value=float(X[:, 3].min()), max_value=float(X[:, 3].max()), value=float(X[:, 3].mean()))
+visibility = st.slider('Visibility', min_value=float(X[:, 4].min()), max_value=float(X[:, 4].max()), value=float(X[:, 4].mean()))
+avg_wind_speed = st.slider('Average Wind Speed', min_value=float(X[:, 5].min()), max_value=float(X[:, 5].max()), value=float(X[:, 5].mean()))
+pressure = st.slider('Pressure', min_value=float(X[:, 6].min()), max_value=float(X[:, 6].max()), value=float(X[:, 6].mean()))
+wind_power_index = st.slider('Wind Power Index', min_value=float(X[:, 7].min()), max_value=float(X[:, 7].max()), value=float(X[:, 7].mean()))
+solar_intensity_index = st.slider('Solar Intensity Index', min_value=float(X[:, 8].min()), max_value=float(X[:, 8].max()), value=float(X[:, 8].mean()))
+
+# Prepare input for prediction
+input_data = np.array([[temperature, wind_speed, humidity, sky_cover, visibility, avg_wind_speed, pressure, wind_power_index, solar_intensity_index]])
+
+# Scale the input data
+input_data_scaled = scaler.transform(input_data)
+
+# Prediction
+predicted_power = best_model.predict(input_data_scaled)
+
+# Display the prediction
+st.subheader(f"Predicted Power Generated: {predicted_power[0]:.2f} kW")
+
+# Display model performance on test set
+st.write("### Model Performance on Test Set")
+y_pred = best_model.predict(X_test)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+r2 = r2_score(y_test, y_pred)
+st.write(f"RMSE: {rmse:.2f}")
+st.write(f"R²: {r2:.2f}")
